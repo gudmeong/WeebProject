@@ -11,7 +11,7 @@ from distutils.util import strtobool as sb
 from logging import DEBUG, INFO, basicConfig, getLogger
 from platform import python_version
 from sys import version_info
-from time import sleep
+from time import time, sleep
 
 from dotenv import load_dotenv
 from pylast import LastFMNetwork, md5
@@ -22,6 +22,7 @@ from telethon.network.connection.tcpabridged import ConnectionTcpAbridged
 from telethon.sessions import StringSession
 
 load_dotenv("config.env")
+ubotStart = time()
 
 # Bot Logs setup:
 CONSOLE_LOGGER_VERBOSE = sb(os.environ.get("CONSOLE_LOGGER_VERBOSE", "False"))

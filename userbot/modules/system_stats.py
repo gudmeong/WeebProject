@@ -5,6 +5,7 @@
 #
 """ Userbot module for getting information about the server. """
 
+from time import time
 from asyncio import create_subprocess_exec as asyncrunapp
 from asyncio.subprocess import PIPE as asyncPIPE
 from platform import python_version, uname
@@ -14,7 +15,7 @@ from git import Repo
 from telethon import version
 from telethon.errors.rpcerrorlist import MediaEmptyError
 
-from userbot import ALIVE_LOGO, ALIVE_NAME, CMD_HELP
+from userbot import ALIVE_LOGO, ALIVE_NAME, CMD_HELP, ubotStart
 from userbot.events import register
 
 # ================= CONSTANT =================
@@ -78,15 +79,35 @@ async def bot_ver(event):
                 "Shame that you don't have git, you're running - 'v1.beta.4' anyway!"
             )
 
+async def get_readable_time(seconds: int) -> str:
+    result = ""
+    (days, remainder) = divmod(seconds, 86400)
+    days = int(days)
+    if days != 0:
+        result += f"{days}d "
+    (hours, remainder) = divmod(remainder, 3600)
+    hours = int(hours)
+    if hours != 0:
+        result += f"{hours}h "
+    (minutes, seconds) = divmod(remainder, 60)
+    minutes = int(minutes)
+    if minutes != 0:
+        result += f"{minutes}m "
+    seconds = int(seconds)
+    result += f"{seconds}s"
+    return result
 
 @register(outgoing=True, pattern=r"^\.(alive|on)$")
 async def amireallyalive(alive):
     """For .alive command, check if the bot is running."""
+    uptime = await get_readable_time((time() - ubotStart))
     output = (
-        f"**WeebProject** is running on **{repo.active_branch.name}**\n\n"
-        f"**Python :** __v{python_version()}__\n"
-        f"**Telethon :** __v{version.__version__}__\n"
-        f"**User :** __{DEFAULTUSER}__"
+        f"**WeebProject [Fork]** is running on **{repo.active_branch.name}**\n\n"
+        f"===Library Version===\n"
+        f"**Python:** {python_version()}\n"
+        f"**Telethon:** {version.__version__}\n"
+        f"**User:** {DEFAULTUSER}\n"
+        f"**Bot Uptime:** {uptime}"
     )
     if ALIVE_LOGO:
         try:
