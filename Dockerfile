@@ -12,5 +12,8 @@ COPY ./sample_config.env ./config.env* /home/weebproject/
 # Setup Working Directory
 WORKDIR /home/weebproject/
 
+# install requirement
+RUN pip3 install --no-cache-dir -r requirements.txt
+
 # Finalization
 CMD ["python3","-m","userbot"]

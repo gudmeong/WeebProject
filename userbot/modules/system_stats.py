@@ -5,7 +5,11 @@
 #
 """ Userbot module for getting information about the server. """
 
+import psutil
+import platform
+import sys
 from time import time
+from datetime import datetime
 from asyncio import create_subprocess_exec as asyncrunapp
 from asyncio.subprocess import PIPE as asyncPIPE
 from platform import python_version, uname
@@ -121,6 +125,82 @@ async def amireallyalive(alive):
     else:
         await alive.edit(output)
 
+def get_size(bytes, suffix="B"):
+    factor = 1024
+    for unit in ["", "K", "M", "G", "T", "P"]:
+        if bytes < factor:
+            return f"{bytes:.2f}{unit}{suffix}"
+        bytes /= factor
+
+@register(outgoing=True, pattern=r"^\.spek")
+async def psu(event):
+    uname = platform.uname()
+    softw = "**System Information**\n"
+    softw += f"`System   : {uname.system}`\n"
+    softw += f"`Release  : {uname.release}`\n"
+    softw += f"`Version  : {uname.version}`\n"
+    softw += f"`Machine  : {uname.machine}`\n"
+    # Boot Time
+    boot_time_timestamp = psutil.boot_time()
+    bt = datetime.fromtimestamp(boot_time_timestamp)
+    softw += f"`Boot Time: {bt.day}/{bt.month}/{bt.year}  {bt.hour}:{bt.minute}:{bt.second}`\n"
+    # CPU Cores
+    cpuu = "**CPU Info**\n"
+    cpuu += "`Physical cores   : " + \
+        str(psutil.cpu_count(logical=False)) + "`\n"
+    cpuu += "`Total cores      : " + \
+        str(psutil.cpu_count(logical=True)) + "`\n"
+    # CPU frequencies
+    cpufreq = psutil.cpu_freq()
+    cpuu += f"`Max Frequency    : {cpufreq.max:.2f}Mhz`\n"
+    cpuu += f"`Min Frequency    : {cpufreq.min:.2f}Mhz`\n"
+    cpuu += f"`Current Frequency: {cpufreq.current:.2f}Mhz`\n\n"
+    # CPU usage
+    cpuu += "**CPU Usage Per Core**\n"
+    for i, percentage in enumerate(psutil.cpu_percent(percpu=True)):
+        cpuu += f"`Core {i}  : {percentage}%`\n"
+    cpuu += "**Total CPU Usage**\n"
+    cpuu += f"`All Core: {psutil.cpu_percent()}%`\n"
+    # Disk Usage
+    partitions = psutil.disk_partitions()
+    for partition in partitions:
+        device = {partition.device}
+        mountpoint = {partition.mountpoint}
+        fstype = {partition.fstype}
+        try:
+            partition_usage = psutil.disk_usage(partition.mountpoint)
+        except PermissionError:
+            continue
+    disk = "**Disk Usage**\n"
+    disk += f"`Device    : {device}`\n"
+    disk += f"`Mountpoint: {mountpoint}`\n"
+    disk += f"`FS Type   : {fstype}`\n"
+    disk += f"`Total Size: {get_size(partition_usage.total)}`\n"
+    disk += f"`Used      : {get_size(partition_usage.used)}`\n"
+    disk += f"`Free      : {get_size(partition_usage.free)}`\n"
+    disk += f"`Percentage: {partition_usage.percent}%`\n"
+    # RAM Usage
+    svmem = psutil.virtual_memory()
+    memm = "**Memory Usage**\n"
+    memm += f"`Total     : {get_size(svmem.total)}`\n"
+    memm += f"`Available : {get_size(svmem.available)}`\n"
+    memm += f"`Used      : {get_size(svmem.used)}`\n"
+    memm += f"`Percentage: {svmem.percent}%`\n"
+    # Bandwidth Usage
+    bw = "**Bandwith Usage**\n"
+    bw += f"`Upload  : {get_size(psutil.net_io_counters().bytes_sent)}`\n"
+    bw += f"`Download: {get_size(psutil.net_io_counters().bytes_recv)}`\n"
+    # Help Strings
+    help_string = f"{str(softw)}\n"
+    help_string += f"{str(cpuu)}\n"
+    help_string += f"{str(disk)}\n"
+    help_string += f"{str(memm)}\n"
+    help_string += f"{str(bw)}\n"
+    help_string += "**Engine Info**\n"
+    help_string += f"`Python {sys.version}`\n"
+    help_string += f"`Telethon {version.__version__}`"
+    await event.edit(help_string)
+
 
 @register(outgoing=True, pattern=r"^\.aliveu (.+)")
 async def amireallyaliveuser(username):
@@ -142,6 +222,7 @@ async def amireallyalivereset(ureset):
 CMD_HELP.update(
     {
         "sysd": ">`.sysd`" "\nUsage: Shows system information using neofetch.",
+        "spek": ">`.spek`" "\nUsage: Show detailed system specification",
         "botver": ">`.botver`" "\nUsage: Shows the userbot version.",
         "alive": ">`.alive`"
         "\nUsage: Type .alive to see wether your bot is working or not."

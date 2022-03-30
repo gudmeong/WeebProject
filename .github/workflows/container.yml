@@ -3,7 +3,7 @@ name: Heroku Container from scratch
 on: workflow_dispatch
 
 env:
-  IMAGE_NAME: web
+  IMAGE_NAME: worker
   HEROKU_API_KEY: ${{ secrets.HEROKU_API }}
   HEROKU_APP_NAME: ${{ secrets.HEROKU_APP }}
 
