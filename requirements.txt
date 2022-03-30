@@ -11,6 +11,7 @@ cowpy
 deezloader==2021.9.22
 dnspython
 emoji
+fake-headers
 Faker==8.1.2
 git+https://github.com/Ncode2014/search-engine-parser
 gitpython
@@ -33,6 +34,7 @@ lottie
 lxml
 lyricsgenius
 natsort
+newthon==1.25.7
 oauth2client
 pendulum
 Pillow
@@ -52,7 +54,6 @@ scipy
 speedtest-cli
 sqlalchemy<=1.3.23
 telegraph
-telethon
 telethon-session-sqlalchemy
 telethon-tgcrypto
 urbandict
