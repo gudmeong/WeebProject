@@ -153,7 +153,7 @@ async def kang(args):
             "  A <strong>Telegram</strong> user has created the <strong>Sticker&nbsp;Set</strong>."
             not in htmlstr
         ):
-            async with bot.conversation("Stickers") as conv:
+            async with bot.conversation("@Stickers") as conv:
                 await conv.send_message("/addsticker")
                 await conv.get_response()
                 # Ensure user doesn't get spamming notifications
@@ -241,7 +241,7 @@ async def kang(args):
                 await bot.send_read_acknowledge(conv.chat_id)
         else:
             await args.edit("`Brewing a new Pack...`")
-            async with bot.conversation("Stickers") as conv:
+            async with bot.conversation("@Stickers") as conv:
                 await conv.send_message(cmd)
                 await conv.get_response()
                 # Ensure user doesn't get spamming notifications
@@ -337,10 +337,11 @@ async def get_pack_info(event):
 
     get_stickerset = await bot(
         GetStickerSetRequest(
-            InputStickerSetID(
+            stickerset=InputStickerSetID(
                 id=stickerset_attr.stickerset.id,
                 access_hash=stickerset_attr.stickerset.access_hash,
-            )
+            ),
+            hash=0,
         )
     )
     pack_emojis = []
@@ -371,23 +372,34 @@ async def sticker_to_png(sticker):
         await sticker.edit("`Reply to a sticker...`")
         return False
 
-    try:
-        img.document.attributes[1]
-    except Exception:
+    sticker_attr = [
+        attr
+        for attr in img.document.attributes
+        if isinstance(attr, DocumentAttributeSticker)
+    ]
+
+    if not sticker_attr:
         await sticker.edit("`This is not a sticker...`")
         return
 
-    with io.BytesIO() as image:
-        await sticker.client.download_media(img, image)
-        image.name = "sticker.png"
-        image.seek(0)
-        try:
-            await img.reply(file=image, force_document=True)
-        except Exception:
-            await sticker.edit("`Err, can't send file...`")
-        else:
-            await sticker.delete()
-    return
+    await sticker.edit("`Getting sticker...`")
+
+    try:
+        with io.BytesIO() as image:
+            await img.download_media(file=image)
+            img = Image.open(image)
+
+        with io.BytesIO() as image:
+            img.save(image, format="PNG")
+            image.name = "sticker.png"
+            image.seek(0)
+
+            msg = await sticker.respond(file=image.getvalue())
+            await msg.reply(file=image, force_document=True)
+    except Exception as exc:
+        await sticker.edit(f"**ERROR:** {exc}")
+    else:
+        await sticker.delete()
 
 
 async def get_video_reso(video):

@@ -16,9 +16,8 @@ from re import findall
 from urllib.error import HTTPError
 from urllib.parse import quote_plus
 
-from aiohttp import ClientSession
 from bs4 import BeautifulSoup
-from emoji import get_emoji_regexp
+from emoji import replace_emoji
 from googletrans import LANGUAGES, Translator
 from gtts import gTTS
 from gtts.lang import tts_langs
@@ -26,6 +25,7 @@ from hachoir.metadata import extractMetadata
 from hachoir.parser import createParser
 from requests import get
 from search_engine_parser import GoogleSearch
+from selenium.webdriver.common.by import By
 from telethon.errors.rpcerrorlist import MediaEmptyError
 from telethon.tl.types import DocumentAttributeAudio, DocumentAttributeVideo
 from urbandict import define
@@ -60,28 +60,25 @@ async def setlang(prog):
     await prog.edit(f"Language for carbon.now.sh set to {CARBONLANG}")
 
 
-@register(outgoing=True, pattern=r"^\.carbon")
+@register(outgoing=True, pattern=r"^\.carbon(?: (.+)|$)")
 async def carbon_api(e):
     """A Wrapper for carbon.now.sh"""
-    await e.edit("`Processing...`")
-    CARBON = "https://carbon.now.sh/?l={lang}&code={code}"
     global CARBONLANG
-    textx = await e.get_reply_message()
-    pcode = e.text
-    if pcode[8:]:
-        pcode = str(pcode[8:])
-    elif textx:
-        pcode = str(textx.message)  # Importing message to module
-    code = quote_plus(pcode)  # Converting to urlencoded
+
+    await e.edit("`Processing...`")
+    input_str = e.pattern_match.group(1)
+    reply = await e.get_reply_message()
+    code = reply.message if reply else input_str
+    url = f"https://carbon.now.sh/?l={CARBONLANG}&code={quote_plus(code)}"
+
     await e.edit("`Processing...\n25%`")
-    file_path = TEMP_DOWNLOAD_DIRECTORY + "carbon.png"
+    file_path = os.path.join(TEMP_DOWNLOAD_DIRECTORY, "carbon.png")
     if os.path.isfile(file_path):
         os.remove(file_path)
-    url = CARBON.format(code=code, lang=CARBONLANG)
     driver = await chrome()
     driver.get(url)
     await e.edit("`Processing...\n50%`")
-    driver.find_element_by_css_selector('[data-cy="quick-export-button"]').click()
+    driver.find_element(By.CSS_SELECTOR, '[data-cy="quick-export-button"]').click()
     await e.edit("`Processing...\n75%`")
     # Waiting for downloading
     while not os.path.isfile(file_path):
@@ -453,7 +450,7 @@ async def translateme(trans):
         target_lang = "en"
 
     try:
-        reply_text = translator.translate(deEmojify(message), dest=target_lang)
+        reply_text = translator.translate(replace_emoji(message), dest=target_lang)
     except ValueError:
         return await trans.edit("Invalid destination language.")
 
@@ -569,13 +566,6 @@ async def download_video(v_url):
     video = False
     audio = False
 
-    # handle tiktok link
-    if "tiktok.com" in url:
-        async with ClientSession() as ses, ses.head(
-            url, allow_redirects=True, timeout=5
-        ) as head:
-            url = str(head.url)
-
     if "audio" in dl_type:
         opts = {
             "format": "bestaudio",
@@ -645,7 +635,7 @@ async def download_video(v_url):
     except ExtractorError:
         return await v_url.edit("`There was an error during info extraction.`")
     except Exception as e:
-        return await v_url.edit(f"{str(type(e))}: {str(e)}")
+        return await v_url.edit(f"{str(type(e)): {str(e)}}")
     c_time = time.time()
     if audio:
         await v_url.edit(
@@ -739,11 +729,6 @@ async def download_video(v_url):
         await v_url.delete()
 
 
-def deEmojify(inputString):
-    """Remove emojis and other non-safe characters from string"""
-    return get_emoji_regexp().sub("", inputString)
-
-
 CMD_HELP.update(
     {
         "img": ">`.img -l3 <search_query>`"
@@ -771,6 +756,6 @@ CMD_HELP.update(
         "\n\n>`.ripvideo <quality> <url>` (quality is optional)"
         "\nQuality examples : `144` `240` `360` `480` `720` `1080` `2160`"
         "\nUsage: Download videos from YouTube"
-        "\n\n[Other supported sites](https://ytdl-org.github.io/youtube-dl/supportedsites.html)",
+        "\n\n[Other supported sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)",
     }
 )
